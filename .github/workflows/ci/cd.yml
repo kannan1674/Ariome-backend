@@ -1,0 +1,29 @@
+name: Ariome CI/CD
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -e
+            cd /home/ec2-user/Ariome-backend
+            git fetch origin main
+            git reset --hard origin/main
+            npm ci --omit=dev
+            pm2 restart ariome-backend || pm2 start server.js --name ariome-backend
+            pm2 save
