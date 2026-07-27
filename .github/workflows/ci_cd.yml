@@ -10,23 +10,49 @@ jobs:
     runs-on: self-hosted
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Deploy on EC2
         run: |
           set -euo pipefail
-          APP_DIR=/home/ec2-user/Ariome-backend
+
+          echo "== diagnostics =="
+          echo "user=$(whoami)"
+          echo "home=$HOME"
+          echo "pwd=$(pwd)"
+          command -v node; node -v
+          command -v npm; npm -v
+          command -v git
+          command -v pm2 || echo "pm2 not found yet"
+
+          # Use the runner user's home so permissions always work
+          APP_DIR="$HOME/Ariome-backend"
+          REPO_URL="https://github.com/kannan1674/Ariome-backend.git"
+
+          if [ ! -d "$APP_DIR/.git" ]; then
+            echo "Cloning repo into $APP_DIR"
+            rm -rf "$APP_DIR"
+            git clone "$REPO_URL" "$APP_DIR"
+          fi
 
           cd "$APP_DIR"
+          echo "Deploying in $(pwd)"
+
+          git remote set-url origin "$REPO_URL"
           git fetch origin main
+          git checkout -B main origin/main
           git reset --hard origin/main
+          git log -1 --oneline
+
           npm ci --omit=dev
+
+          if ! command -v pm2 >/dev/null 2>&1; then
+            npm install -g pm2
+            export PATH="$(npm prefix -g)/bin:$PATH"
+          fi
 
           if pm2 describe ariome-backend >/dev/null 2>&1; then
             pm2 restart ariome-backend --update-env
           else
-            pm2 start server.js --name ariome-backend
+            pm2 start "$APP_DIR/server.js" --name ariome-backend --cwd "$APP_DIR"
           fi
 
           pm2 save
