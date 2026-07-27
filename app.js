@@ -103,6 +103,10 @@ function createApp() {
         }),
     );
 
+    app.get('/', (_req, res) => {
+        res.type('text').send('welcome meikannan');
+    });
+
     app.get('/api/auth/health', (_req, res) => {
         res.json({
             ok: true,
