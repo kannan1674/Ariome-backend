@@ -1,0 +1,25 @@
+{
+  "watch": [
+    "Routes",
+    "controller",
+    "middleware",
+    "models",
+    "config",
+    "services",
+    "utils",
+    "validators",
+    "scripts",
+    "Email Templates",
+    "app.js",
+    "server.js"
+  ],
+  "ext": "js,json",
+  "ignore": [
+    "node_modules/**",
+    "uploads/**",
+    "package-lock.json",
+    ".git/**",
+    "**/.DS_Store"
+  ],
+  "delay": 500
+}
