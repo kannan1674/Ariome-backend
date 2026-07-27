@@ -104,7 +104,7 @@ function createApp() {
     );
 
     app.get('/', (_req, res) => {
-        res.type('text').send('welcome meikannan');
+        res.type('text').send('welcome to ariome backend');
     });
 
     app.get('/api/auth/health', (_req, res) => {
