@@ -1,0 +1,91 @@
+name: Build and Deploy Docker Image to EC2
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  ECR_REPOSITORY: ariome-backend
+  CONTAINER_NAME: ariome-backend
+  IMAGE_VERSION: v1
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Set image tags
+        run: |
+          echo "IMAGE_TAG=${GITHUB_SHA::7}" >> $GITHUB_ENV
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build Docker image
+        run: |
+          IMAGE_URI=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/$ECR_REPOSITORY
+
+          docker build -t $IMAGE_URI:$IMAGE_VERSION .
+          docker tag $IMAGE_URI:$IMAGE_VERSION $IMAGE_URI:latest
+          docker tag $IMAGE_URI:$IMAGE_VERSION $IMAGE_URI:$IMAGE_TAG
+
+      - name: Push Docker image to ECR
+        run: |
+          IMAGE_URI=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/$ECR_REPOSITORY
+
+          docker push $IMAGE_URI:$IMAGE_VERSION
+          docker push $IMAGE_URI:latest
+          docker push $IMAGE_URI:$IMAGE_TAG
+
+      - name: Deploy latest image on EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -e
+
+            AWS_REGION="${{ secrets.AWS_REGION }}"
+            AWS_ACCOUNT_ID="${{ secrets.AWS_ACCOUNT_ID }}"
+            ECR_REPOSITORY="ariome-backend"
+            CONTAINER_NAME="ariome-backend"
+            IMAGE_URI="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest"
+
+            echo "Logging in to ECR..."
+            aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+
+            echo "Pulling latest image..."
+            docker pull $IMAGE_URI
+
+            echo "Stopping old container..."
+            docker stop $CONTAINER_NAME || true
+            docker rm $CONTAINER_NAME || true
+
+            echo "Starting new container..."
+            docker run -d \
+              --name $CONTAINER_NAME \
+              --restart unless-stopped \
+              -p 8000:8000 \
+              -e LOAD_AWS_SECRETS=true \
+              -e AWS_REGION=us-east-1 \
+              -e AWS_SECRET_ID=ariome/backend/prod \
+              -e PORT=8000 \
+              $IMAGE_URI
+
+            echo "Cleaning old Docker images..."
+            docker image prune -f
+
+            echo "Deployment completed."
+            docker ps
