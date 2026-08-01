@@ -6,8 +6,8 @@ on:
       - main
 
 env:
-  ECR_REPOSITORY: ariome-backend
-  CONTAINER_NAME: ariome-backend
+  ECR_REPOSITORY: ariome_api
+  CONTAINER_NAME: ariome_api
   IMAGE_VERSION: v1
 
 jobs:
@@ -59,8 +59,8 @@ jobs:
 
             AWS_REGION="${{ secrets.AWS_REGION }}"
             AWS_ACCOUNT_ID="${{ secrets.AWS_ACCOUNT_ID }}"
-            ECR_REPOSITORY="ariome-backend"
-            CONTAINER_NAME="ariome-backend"
+            ECR_REPOSITORY="ariome_api"
+            CONTAINER_NAME="ariome_api"
             IMAGE_URI="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest"
 
             echo "Logging in to ECR..."
