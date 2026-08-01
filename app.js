@@ -103,9 +103,10 @@ function createApp() {
         }),
     );
 
-    // app.get('/', (_req, res) => {
-    //     res.type('text').send('welcome to ariome backend');
-    // });
+    app.get('/', (_req, res) => {
+        console.log('docker added');
+        res.type('text').send('docker added');
+    });
 
     app.get('/api/auth/health', (_req, res) => {
         res.json({
