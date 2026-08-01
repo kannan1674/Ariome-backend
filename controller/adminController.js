@@ -2,6 +2,7 @@ const authModel = require('../models/authModel');
 const Video = require('../models/videoModel');
 const { sendServerError } = require('../utils/apiError');
 
+
 function userPublicJSON(user) {
     const displayName = user.profile?.displayName?.trim();
     const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ').trim();
